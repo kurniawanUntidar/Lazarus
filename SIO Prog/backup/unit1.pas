@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Menus, Grids, ExtCtrls,
-  StdCtrls, ComCtrls, Types;
+  StdCtrls, ComCtrls, Buttons, Types;
 
 type
 
@@ -16,23 +16,31 @@ type
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
     Edit: TMenuItem;
-    MenuItem2: TMenuItem;
+    Panel1: TPanel;
+    ReplaceMenu: TMenuItem;
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
-    MenuItem5: TMenuItem;
-    MenuItem7: TMenuItem;
+    ExitMenu: TMenuItem;
+    FindMenu: TMenuItem;
     MenuItem8: TMenuItem;
-    MenuItem9: TMenuItem;
-    Open: TMenuItem;
-    MenuItem6: TMenuItem;
+    PasteMenu: TMenuItem;
+    OpenMenu: TMenuItem;
+    SaveMenu: TMenuItem;
     OpenDialog1: TOpenDialog;
-    SaveAs: TMenuItem;
+    SaveAsMenu: TMenuItem;
+    SpeedButton1: TSpeedButton;
+    SpeedButton2: TSpeedButton;
+    SpeedButton3: TSpeedButton;
     StatusBar1: TStatusBar;
     StringGrid1: TStringGrid;
+    ToolBar1: TToolBar;
     procedure ControlBar1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure MenuItem5Click(Sender: TObject);
-    procedure OpenClick(Sender: TObject);
+    procedure ExitMenuClick(Sender: TObject);
+    procedure OpenMenuClick(Sender: TObject);
+    procedure SaveAsMenuClick(Sender: TObject);
+    procedure SaveMenuClick(Sender: TObject);
+    procedure SpeedButton1Click(Sender: TObject);
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
       aRect: TRect; aState: TGridDrawState);
   private
@@ -63,13 +71,13 @@ begin
   StatusBar1.Panels.Items[2].Width:=Form1.Width div 4;
 end;
 
-procedure TForm1.MenuItem5Click(Sender: TObject);
+procedure TForm1.ExitMenuClick(Sender: TObject);
 begin
    Application.Terminate;
 end;
 
 
-procedure TForm1.OpenClick(Sender: TObject);
+procedure TForm1.OpenMenuClick(Sender: TObject);
 begin
    if OpenDialog1.Execute then
    begin
@@ -82,6 +90,22 @@ begin
 
     StatusBar1.Panels.Items[1].Text:=StatusBar1.Panels.Items[1].Text + OpenDialog1.FileName;
    end;
+
+end;
+
+procedure TForm1.SaveAsMenuClick(Sender: TObject);
+begin
+  //SaveAsMenuClick
+end;
+
+procedure TForm1.SaveMenuClick(Sender: TObject);
+begin
+   //saveKlik
+
+end;
+
+procedure TForm1.SpeedButton1Click(Sender: TObject);
+begin
 
 end;
 
@@ -98,7 +122,7 @@ begin
 
    // Siapkan gaya teks agar rapi (Alignment)
   TS := StringGrid1.Canvas.TextStyle;
-  TS.Alignment := taCenter;
+  TS.Alignment := taLeftJustify;
   TS.Layout := tlCenter;
 
   if (ARow = 0) or (not Assigned(FileData)) then Exit; // Abaikan Header
@@ -107,7 +131,7 @@ begin
 
   // Kolom 0: Alamat
   if ACol = 0 then
-    S := IntToHex(Offset, 8) + ':'
+    S := IntToHex(Offset, 8) + ' :'
 
   // Kolom 1-16: Data Hex
   else if (ACol >= 1) and (ACol <= 16) then
