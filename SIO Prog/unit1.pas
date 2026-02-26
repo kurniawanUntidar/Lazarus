@@ -93,7 +93,14 @@ var
   S: String;
   BytesToRead: Integer; // <--- Tipe data Integer
   i: Integer;
+  TS: TTextStyle;
 begin
+
+   // Siapkan gaya teks agar rapi (Alignment)
+  TS := StringGrid1.Canvas.TextStyle;
+  TS.Alignment := taCenter;
+  TS.Layout := tlCenter;
+
   if (ARow = 0) or (not Assigned(FileData)) then Exit; // Abaikan Header
 
   Offset := (ARow - 1) * 16; // Hitung posisi data berdasarkan baris
@@ -143,7 +150,7 @@ begin
 
   end;
 
-  StringGrid1.Canvas.TextRect(aRect, aRect.Left + 2, aRect.Top + 2, S);
+  StringGrid1.Canvas.TextRect(aRect, aRect.Left + 2, aRect.Top + 2, S, TS);
 end;
 
 end.

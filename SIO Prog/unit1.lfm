@@ -18,74 +18,92 @@ object Form1: TForm1
     ColSizingCursor = crSizeAll
     Columns = <    
       item
+        Alignment = taCenter
         Title.Caption = 'Address'
         Width = 118
       end    
       item
+        Alignment = taCenter
         Title.Caption = '0'
         Width = 22
       end    
       item
+        Alignment = taCenter
         Title.Caption = '1'
         Width = 21
       end    
       item
+        Alignment = taCenter
         Title.Caption = '2'
         Width = 21
       end    
       item
+        Alignment = taCenter
         Title.Caption = '3'
         Width = 22
       end    
       item
+        Alignment = taCenter
         Title.Caption = '4'
         Width = 23
       end    
       item
+        Alignment = taCenter
         Title.Caption = '5'
         Width = 21
       end    
       item
+        Alignment = taCenter
         Title.Caption = '6'
         Width = 23
       end    
       item
+        Alignment = taCenter
         Title.Caption = '7'
         Width = 22
       end    
       item
+        Alignment = taCenter
         Title.Caption = '8'
         Width = 23
       end    
       item
+        Alignment = taCenter
         Title.Caption = '9'
         Width = 23
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'A'
         Width = 22
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'B'
         Width = 19
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'C'
         Width = 21
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'D'
         Width = 22
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'E'
         Width = 22
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'F'
         Width = 19
       end    
       item
+        Alignment = taCenter
         Title.Caption = 'ASCII'
         Width = 177
       end>
