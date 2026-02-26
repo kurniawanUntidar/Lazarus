@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Menus, Grids, ExtCtrls,
-  StdCtrls, ComCtrls;
+  StdCtrls, ComCtrls, Types;
 
 type
 
@@ -30,8 +30,11 @@ type
     StatusBar1: TStatusBar;
     StringGrid1: TStringGrid;
     procedure ControlBar1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
     procedure MenuItem5Click(Sender: TObject);
     procedure OpenClick(Sender: TObject);
+    procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
+      aRect: TRect; aState: TGridDrawState);
   private
 
   public
@@ -40,6 +43,7 @@ type
 
 var
   Form1: TForm1;
+  FileData: TMemoryStream;
 
 implementation
 
@@ -47,61 +51,97 @@ implementation
 
 { TForm1 }
 
-procedure TForm1.MenuItem5Click(Sender: TObject);
-begin
-   Application.Terminate;
-end;
-
 procedure TForm1.ControlBar1Click(Sender: TObject);
 begin
 
 end;
 
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+
+end;
+
+procedure TForm1.MenuItem5Click(Sender: TObject);
+begin
+   Application.Terminate;
+end;
+
+
 procedure TForm1.OpenClick(Sender: TObject);
-var
-  FS: TFileStream;
-  Buffer: Byte;
-  RowData: String;
-  ASCIIStr: String;
-  RowIndex, ColIndex: Integer;
-  Addr: Int64;
 begin
    if OpenDialog1.Execute then
    begin
-     FS:= TFileStream.Create(OpenDialog1.FileName,fmOpenRead);
-     try
-       StringGrid1.RowCount := (FS.Size div 16)+1;
-       Addr:=0;
-       RowIndex := 1;
-       while FS.Position < FS.Size do
-             // Tampilkan alamat di kolom 0
-             begin
-                  StringGrid1.Cells[0,RowIndex]:= IntToHex(Addr,8)+' :';  // konvert int to hex dari addr dalam format 8 bit
-                  ASCIIStr := '';
-                  //Tampilkan 16 byte per baris
-                  for ColIndex := 1 to 16 do
-                  begin
-                       if FS.Position < FS.Size then
-                       begin
-                         FS.Read(Buffer,1);
-                         StringGrid1.Cells[ColIndex,RowIndex]:=IntToHex(Buffer,2);
-                         // Konversi ke karakter ASCII jika data printable
-                         if Buffer in [32..126] then
-                         ASCIIStr := ASCIIStr + Chr(Buffer)
-                         else
-                           ASCIIStr := ASCIIStr + '.';
-                       end;
-                  end;
-                  StringGrid1.Cells[17,RowIndex]:= ASCIIStr; // Menampilkan ASCII di kolom 17
+     if Assigned(FileData) then FileData.Clear else FileData := TMemoryStream.Create;
+    FileData.LoadFromFile(OpenDialog1.FileName);
 
-                  inc(RowIndex);
-                  Inc(Addr,16);
-             end;
-     finally
-       FS.Free;
-     end;
+    // Tentukan jumlah baris secara instan
+    StringGrid1.RowCount := (FileData.Size div 16) + 1;
+    StringGrid1.Invalidate; // Perintahkan grid untuk menggambar ulang
+
+    StatusBar1.Panels.Items[1].Text:=StatusBar1.Panels.Items[1].Text + OpenDialog1.FileName;
    end;
 
+end;
+
+procedure TForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
+  aRect: TRect; aState: TGridDrawState);
+var
+  Offset: Int64;
+  B: Byte;
+  S: String;
+  BytesToRead: Integer; // <--- Tipe data Integer
+  i: Integer;
+begin
+  if (ARow = 0) or (not Assigned(FileData)) then Exit; // Abaikan Header
+
+  Offset := (ARow - 1) * 16; // Hitung posisi data berdasarkan baris
+
+  // Kolom 0: Alamat
+  if ACol = 0 then
+    S := IntToHex(Offset, 8) + ':'
+
+  // Kolom 1-16: Data Hex
+  else if (ACol >= 1) and (ACol <= 16) then
+  begin
+    if (Offset + ACol - 1) < FileData.Size then
+    begin
+      FileData.Position := Offset + ACol - 1;
+      FileData.Read(B, 1);
+      S := IntToHex(B, 2);
+    end else S := '';
+  end
+
+  // Kolom 17: ASCII
+  else if ACol = 17 then
+  begin
+    S := '';
+  // Pastikan posisi tidak melebihi ukuran file
+  if Offset < FileData.Size then
+  begin
+    // Tentukan berapa byte yang tersisa (maksimal 16)
+    BytesToRead := FileData.Size - Offset;
+    if BytesToRead > 16 then BytesToRead := 16;
+
+    // Set kapasitas string untuk performa (menghindari realokasi memori)
+    SetLength(S, BytesToRead);
+
+    // Pindahkan posisi stream ke offset baris ini
+    FileData.Position := Offset;
+
+    // Baca blok data sekaligus ke dalam string (casting pointer)
+    FileData.Read(S[1], BytesToRead);
+
+    // Filter karakter: Ubah karakter non-printable menjadi titik (.)
+    for i := 1 to Length(S) do
+    begin
+      if not (S[i] in [#32..#126]) then
+        S[i] := '.';
+    end;
+  end;
+
+  end;
+
+  StringGrid1.Canvas.TextRect(aRect, aRect.Left + 2, aRect.Top + 2, S);
 end;
 
 end.
