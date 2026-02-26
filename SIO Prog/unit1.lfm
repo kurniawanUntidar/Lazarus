@@ -2,15 +2,16 @@ object Form1: TForm1
   Left = 199
   Height = 561
   Top = 250
-  Width = 1145
+  Width = 883
   Caption = 'General SIO Programmer'
   ClientHeight = 561
-  ClientWidth = 1145
+  ClientWidth = 883
   Menu = MainMenu1
   LCLVersion = '4.4.0.0'
+  OnCreate = FormCreate
   object StringGrid1: TStringGrid
     Left = 16
-    Height = 356
+    Height = 428
     Top = 88
     Width = 688
     ColCount = 18
@@ -90,7 +91,7 @@ object Form1: TForm1
       end>
     DefaultColWidth = 12
     FixedCols = 0
-    Options = [goVertLine, goHorzLine, goRangeSelect, goRowSelect, goSmoothScroll]
+    Options = [goVertLine, goHorzLine, goRangeSelect, goEditing, goRowSelect, goSmoothScroll]
     TabOrder = 0
     OnDrawCell = StringGrid1DrawCell
     ColWidths = (
@@ -118,21 +119,19 @@ object Form1: TForm1
     Left = 0
     Height = 19
     Top = 542
-    Width = 1145
+    Width = 883
     Panels = <    
       item
         Text = 'Ready'
-        Width = 100
+        Width = 50
       end    
       item
-        Alignment = taCenter
         Text = 'File : '
-        Width = 800
+        Width = 50
       end    
       item
-        Alignment = taRightJustify
         Text = 'Device Connected : '
-        Width = 100
+        Width = 50
       end>
     SimplePanel = False
   end
@@ -466,6 +465,9 @@ object Form1: TForm1
     end
   end
   object OpenDialog1: TOpenDialog
+    FileName = '/home/kurniawan/Downloads/BIOS/ACER AN515-56 LA-L051P SRKH6 N18P-G61-A1 16MB .BIN'
+    Filter = 'Binary File|*.BIN;*.bin;*.hex;*.HEX'
+    InitialDir = '/home/kurniawan/Downloads/BIOS/'
     Left = 648
   end
 end

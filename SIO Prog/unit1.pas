@@ -58,7 +58,9 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-
+  StatusBar1.Panels.Items[0].Width:=Form1.Width div 4;
+  StatusBar1.Panels.Items[1].Width:=Form1.Width div 2;
+  StatusBar1.Panels.Items[2].Width:=Form1.Width div 4;
 end;
 
 procedure TForm1.MenuItem5Click(Sender: TObject);

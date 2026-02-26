@@ -58,7 +58,9 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-
+  StatusBar1.Panels.Items[0].Width:=Form1.Width div 4;
+  StatusBar1.Panels.Items[1].Width:=Form1.Width div 2;
+  StatusBar1.Panels.Items[2].Width:=Form1.Width div 4;
 end;
 
 procedure TForm1.MenuItem5Click(Sender: TObject);
@@ -138,15 +140,9 @@ begin
         S[i] := '.';
     end;
   end;
-    // Loop kecil untuk mengambil 16 karakter ASCII
-    // (Bisa dioptimasi lebih lanjut)
+
   end;
-    if ACol = 0 then
-  StringGrid1.Canvas.Font.Color := clBlue      // Alamat jadi Biru
-else if ACol = 17 then
-  StringGrid1.Canvas.Font.Color := clGreen  // ASCII jadi Hijau
-else
-  StringGrid1.Canvas.Font.Color := clBlack;
+
   StringGrid1.Canvas.TextRect(aRect, aRect.Left + 2, aRect.Top + 2, S);
 end;
 
