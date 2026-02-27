@@ -6,14 +6,16 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Menus, Grids, ExtCtrls,
-  StdCtrls, ComCtrls, Buttons, Types;
+  StdCtrls, ComCtrls, Buttons, LazSerial, Types;
 
 type
 
   { TForm1 }
 
   TForm1 = class(TForm)
+    LazSerial1: TLazSerial;
     MainMenu1: TMainMenu;
+    Memo1: TMemo;
     MenuItem1: TMenuItem;
     Edit: TMenuItem;
     ReplaceMenu: TMenuItem;
@@ -30,12 +32,16 @@ type
     SpeedButton1: TSpeedButton;
     SpeedButton2: TSpeedButton;
     SpeedButton3: TSpeedButton;
+    btnConnect: TSpeedButton;
     StatusBar1: TStatusBar;
     StringGrid1: TStringGrid;
     ToolBar1: TToolBar;
+    procedure btnConnectClick(Sender: TObject);
     procedure ControlBar1Click(Sender: TObject);
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
+    procedure LazSerial1RxData(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure SaveAsMenuClick(Sender: TObject);
     procedure SaveMenuClick(Sender: TObject);
@@ -51,6 +57,7 @@ type
 var
   Form1: TForm1;
   FileData: TMemoryStream;
+  RxData:String;
 
 implementation
 
@@ -63,16 +70,62 @@ begin
 
 end;
 
+procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+   LazSerial1.Close;
+end;
+
+procedure TForm1.btnConnectClick(Sender: TObject);
+  var
+  Packet: array[0..3] of Byte;
+begin
+  Packet[0] := $AA; // Header
+  Packet[1] := $06; // CMD_CHECK_CONN
+  Packet[2] := $00; // Length 0
+  Packet[3] := $AA xor $06 xor $00; // Checksum
+
+  LazSerial1.Open;
+  LazSerial1.WriteData('a');
+
+  //LazSerial1.WriteBuffer(Packet[0], 4);
+
+end;
+
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   StatusBar1.Panels.Items[0].Width:=Form1.Width div 4;
   StatusBar1.Panels.Items[1].Width:=Form1.Width div 2;
   StatusBar1.Panels.Items[2].Width:=Form1.Width div 4;
+  Memo1.Lines.Clear;
 end;
 
 procedure TForm1.ExitMenuClick(Sender: TObject);
 begin
    Application.Terminate;
+end;
+
+procedure TForm1.LazSerial1RxData(Sender: TObject);
+  var
+    //IncomingData: Char;
+  Buffer: array of Byte;
+  Len: Integer;
+begin
+  // Len := LazSerial1.ReadData;
+  // //IncomingData := LazSerial1.ReadData;
+  // //RxData := RxData + IncomingData;
+  // //if(IncomingData = $10) then Memo1.Lines.Add(RxData);
+  // if Len > 0 then
+  //begin
+  //  SetLength(Buffer, Len);
+  //  LazSerial1.ReadBuffer(Buffer[0], Len);
+
+    // Cek apakah ini respon untuk CMD_CHECK_CONN (0x06)
+    //if (Buffer[0] = $AA) and (Buffer[1] = $06) then
+    //begin
+    //   Memo1.Lines.Add('Arduino terdeteksi dan merespon protokol.');
+    //end;
+  //end;
+
 end;
 
 
