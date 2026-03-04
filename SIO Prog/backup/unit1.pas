@@ -13,6 +13,8 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
     LazSerial1: TLazSerial;
     MainMenu1: TMainMenu;
     Memo1: TMemo;
@@ -42,11 +44,12 @@ type
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure LazSerial1RxData(Sender: TObject);
+    procedure Memo1Change(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure SaveAsMenuClick(Sender: TObject);
     procedure SaveMenuClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
-    procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
+    procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
       aRect: TRect; aState: TGridDrawState);
   private
 
@@ -57,7 +60,7 @@ type
 var
   Form1: TForm1;
   FileData: TMemoryStream;
-  RxData:String;
+  RxData: string;
 
 implementation
 
@@ -72,12 +75,12 @@ end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-   LazSerial1.Close;
+  LazSerial1.Close;
 end;
 
 procedure TForm1.btnConnectClick(Sender: TObject);
-  var
-  Packet: array[0..3] of Byte;
+var
+  Packet: array[0..3] of byte;
 begin
   Packet[0] := $AA; // Header
   Packet[1] := $06; // CMD_CHECK_CONN
@@ -85,31 +88,33 @@ begin
   Packet[3] := $AA xor $06 xor $00; // Checksum
 
   LazSerial1.Open;
-  LazSerial1.WriteData('a');
+  //LazSerial1.WriteData('a');
 
-  //LazSerial1.WriteBuffer(Packet[0], 4);
+  LazSerial1.WriteBuffer(Packet[0], 4);
 
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  StatusBar1.Panels.Items[0].Width:=Form1.Width div 4;
-  StatusBar1.Panels.Items[1].Width:=Form1.Width div 2;
-  StatusBar1.Panels.Items[2].Width:=Form1.Width div 4;
+  StatusBar1.Panels.Items[0].Width := Form1.Width div 4;
+  StatusBar1.Panels.Items[1].Width := Form1.Width div 2;
+  StatusBar1.Panels.Items[2].Width := Form1.Width div 4;
   Memo1.Lines.Clear;
 end;
 
 procedure TForm1.ExitMenuClick(Sender: TObject);
 begin
-   Application.Terminate;
+  Application.Terminate;
 end;
 
 procedure TForm1.LazSerial1RxData(Sender: TObject);
-  var
-    //IncomingData: Char;
-  Buffer: array of Byte;
-  Len: Integer;
+var
+  IncomingData: string;
+  Buffer: array of byte;
+  Len: integer;
 begin
+  IncomingData := LazSerial1.ReadData;
+  Memo1.Lines.Add(IncomingData);
   // Len := LazSerial1.ReadData;
   // //IncomingData := LazSerial1.ReadData;
   // //RxData := RxData + IncomingData;
@@ -119,29 +124,37 @@ begin
   //  SetLength(Buffer, Len);
   //  LazSerial1.ReadBuffer(Buffer[0], Len);
 
-    // Cek apakah ini respon untuk CMD_CHECK_CONN (0x06)
-    //if (Buffer[0] = $AA) and (Buffer[1] = $06) then
-    //begin
-    //   Memo1.Lines.Add('Arduino terdeteksi dan merespon protokol.');
-    //end;
-  end;
+  // Cek apakah ini respon untuk CMD_CHECK_CONN (0x06)
+  //if (Buffer[0] = $AA) and (Buffer[1] = $06) then
+  //begin
+  //   Memo1.Lines.Add('Arduino terdeteksi dan merespon protokol.');
+  //end;
+  //end;
+
+end;
+
+procedure TForm1.Memo1Change(Sender: TObject);
+begin
 
 end;
 
 
 procedure TForm1.OpenMenuClick(Sender: TObject);
 begin
-   if OpenDialog1.Execute then
-   begin
-     if Assigned(FileData) then FileData.Clear else FileData := TMemoryStream.Create;
+  if OpenDialog1.Execute then
+  begin
+    if Assigned(FileData) then FileData.Clear
+    else
+      FileData := TMemoryStream.Create;
     FileData.LoadFromFile(OpenDialog1.FileName);
 
     // Tentukan jumlah baris secara instan
     StringGrid1.RowCount := (FileData.Size div 16) + 1;
     StringGrid1.Invalidate; // Perintahkan grid untuk menggambar ulang
 
-    StatusBar1.Panels.Items[1].Text:=StatusBar1.Panels.Items[1].Text + OpenDialog1.FileName;
-   end;
+    StatusBar1.Panels.Items[1].Text := StatusBar1.Panels.Items[1].Text +
+      OpenDialog1.FileName;
+  end;
 
 end;
 
@@ -152,7 +165,7 @@ end;
 
 procedure TForm1.SaveMenuClick(Sender: TObject);
 begin
-   //saveKlik
+  //saveKlik
 
 end;
 
@@ -161,18 +174,18 @@ begin
 
 end;
 
-procedure TForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
+procedure TForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
   aRect: TRect; aState: TGridDrawState);
 var
-  Offset: Int64;
-  B: Byte;
-  S: String;
-  BytesToRead: Integer; // <--- Tipe data Integer
-  i: Integer;
+  Offset: int64;
+  B: byte;
+  S: string;
+  BytesToRead: integer; // <--- Tipe data Integer
+  i: integer;
   TS: TTextStyle;
 begin
 
-   // Siapkan gaya teks agar rapi (Alignment)
+  // Siapkan gaya teks agar rapi (Alignment)
   TS := StringGrid1.Canvas.TextStyle;
   TS.Alignment := taLeftJustify;
   TS.Layout := tlCenter;
@@ -193,36 +206,38 @@ begin
       FileData.Position := Offset + ACol - 1;
       FileData.Read(B, 1);
       S := IntToHex(B, 2);
-    end else S := '';
+    end
+    else
+      S := '';
   end
 
   // Kolom 17: ASCII
   else if ACol = 17 then
   begin
     S := '';
-  // Pastikan posisi tidak melebihi ukuran file
-  if Offset < FileData.Size then
-  begin
-    // Tentukan berapa byte yang tersisa (maksimal 16)
-    BytesToRead := FileData.Size - Offset;
-    if BytesToRead > 16 then BytesToRead := 16;
-
-    // Set kapasitas string untuk performa (menghindari realokasi memori)
-    SetLength(S, BytesToRead);
-
-    // Pindahkan posisi stream ke offset baris ini
-    FileData.Position := Offset;
-
-    // Baca blok data sekaligus ke dalam string (casting pointer)
-    FileData.Read(S[1], BytesToRead);
-
-    // Filter karakter: Ubah karakter non-printable menjadi titik (.)
-    for i := 1 to Length(S) do
+    // Pastikan posisi tidak melebihi ukuran file
+    if Offset < FileData.Size then
     begin
-      if not (S[i] in [#32..#126]) then
-        S[i] := '.';
+      // Tentukan berapa byte yang tersisa (maksimal 16)
+      BytesToRead := FileData.Size - Offset;
+      if BytesToRead > 16 then BytesToRead := 16;
+
+      // Set kapasitas string untuk performa (menghindari realokasi memori)
+      SetLength(S, BytesToRead);
+
+      // Pindahkan posisi stream ke offset baris ini
+      FileData.Position := Offset;
+
+      // Baca blok data sekaligus ke dalam string (casting pointer)
+      FileData.Read(S[1], BytesToRead);
+
+      // Filter karakter: Ubah karakter non-printable menjadi titik (.)
+      for i := 1 to Length(S) do
+      begin
+        if not (S[i] in [#32..#126]) then
+          S[i] := '.';
+      end;
     end;
-  end;
 
   end;
 
@@ -230,4 +245,3 @@ begin
 end;
 
 end.
-
