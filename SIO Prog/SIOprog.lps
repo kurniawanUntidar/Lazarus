@@ -9,7 +9,7 @@
         <Filename Value="SIOprog.lpr"/>
         <IsPartOfProject Value="True"/>
         <CursorPos X="37" Y="14"/>
-        <UsageCount Value="88"/>
+        <UsageCount Value="89"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -23,7 +23,7 @@
         <EditorIndex Value="1"/>
         <TopLine Value="136"/>
         <CursorPos X="3" Y="138"/>
-        <UsageCount Value="88"/>
+        <UsageCount Value="89"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit>
@@ -35,15 +35,24 @@
         <UsageCount Value="4"/>
       </Unit>
       <Unit>
-        <Filename Value="..\..\..\..\..\usr\share\lazarus\4.4.0\components\Cport\Source\CPort.pas"/>
+        <Filename Value="F:\usr\share\lazarus\4.4.0\components\Cport\Source\CPort.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="567"/>
         <CursorPos X="35" Y="582"/>
         <UsageCount Value="4"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit>
+      <Unit>
+        <Filename Value="unit1.lfm"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="867"/>
+        <CursorPos X="67" Y="897"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit>
     </Units>
-    <JumpHistory HistoryIndex="26">
+    <JumpHistory HistoryIndex="28">
       <Position>
         <Filename Value="unit1.pas"/>
         <Caret Line="89" Column="11" TopLine="73"/>
@@ -151,6 +160,13 @@
       <Position>
         <Filename Value="unit1.pas"/>
         <Caret Line="137" Column="3" TopLine="135"/>
+      </Position>
+      <Position>
+        <Filename Value="unit1.lfm"/>
+      </Position>
+      <Position>
+        <Filename Value="unit1.lfm"/>
+        <Caret Line="10" Column="25"/>
       </Position>
     </JumpHistory>
     <RunParams>
