@@ -895,7 +895,7 @@ object Form1: TForm1
     SynSer.AtTimeout = 1000
     SynSer.InterPacketTimeout = False
     SynSer.NonBlock = False
-    Device = '/dev/ttyACM0'
+    Device = '/tmp/vserial'
     RcvLineCRLF = False
     OnRxData = LazSerial1RxData
     Left = 792

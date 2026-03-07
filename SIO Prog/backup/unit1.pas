@@ -39,7 +39,6 @@ type
     StringGrid1: TStringGrid;
     ToolBar1: TToolBar;
     procedure btnConnectClick(Sender: TObject);
-    procedure ControlBar1Click(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
@@ -61,17 +60,15 @@ var
   Form1: TForm1;
   FileData: TMemoryStream;
   RxData: string;
+  header:Array [0..2] of byte;
+  Buffer: array of byte;
+  LenBuffer: integer;
 
 implementation
 
 {$R *.lfm}
 
 { TForm1 }
-
-procedure TForm1.ControlBar1Click(Sender: TObject);
-begin
-
-end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
@@ -110,12 +107,10 @@ end;
 procedure TForm1.LazSerial1RxData(Sender: TObject);
 var
   IncomingData: string;
-  Buffer: array of byte;
-  Len: integer;
   B : byte;
 begin
-  B := LazSerial1.SynSer.RecvByte(100);
-  Memo1.Lines.Add(IntToStr(B));
+  B := LazSerial1.SynSer.RecvByte(1000);
+  Memo1.Lines.Add(char(B));
   //IncomingData := LazSerial1.ReadData;
   //Memo1.Lines.Add(IncomingData);
   // Len := LazSerial1.ReadData;
