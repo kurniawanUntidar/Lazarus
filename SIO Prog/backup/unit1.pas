@@ -13,6 +13,7 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    btnConnect: TSpeedButton;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     LazSerial1: TLazSerial;
@@ -34,7 +35,6 @@ type
     SpeedButton1: TSpeedButton;
     SpeedButton2: TSpeedButton;
     SpeedButton3: TSpeedButton;
-    btnConnect: TSpeedButton;
     StatusBar1: TStatusBar;
     StringGrid1: TStringGrid;
     ToolBar1: TToolBar;
@@ -112,9 +112,12 @@ var
   IncomingData: string;
   Buffer: array of byte;
   Len: integer;
+  B : byte;
 begin
-  IncomingData := LazSerial1.ReadData;
-  Memo1.Lines.Add(IncomingData);
+  B := LazSerial1.SynSer.RecvByte(100);
+  Memo1.Lines.Add(IntToStr(B));
+  //IncomingData := LazSerial1.ReadData;
+  //Memo1.Lines.Add(IncomingData);
   // Len := LazSerial1.ReadData;
   // //IncomingData := LazSerial1.ReadData;
   // //RxData := RxData + IncomingData;
