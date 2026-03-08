@@ -201,6 +201,7 @@ object Form1: TForm1
     EdgeOuter = esRaised
     ParentShowHint = False
     TabOrder = 3
+    OnClick = ToolBar1Click
     object SpeedButton3: TSpeedButton
       Left = 71
       Height = 34

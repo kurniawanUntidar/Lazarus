@@ -43,13 +43,13 @@ type
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure LazSerial1RxData(Sender: TObject);
-    procedure Memo1Change(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure SaveAsMenuClick(Sender: TObject);
     procedure SaveMenuClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
       aRect: TRect; aState: TGridDrawState);
+    procedure ToolBar1Click(Sender: TObject);
   private
 
   public
@@ -97,6 +97,7 @@ begin
   StatusBar1.Panels.Items[1].Width := Form1.Width div 2;
   StatusBar1.Panels.Items[2].Width := Form1.Width div 4;
   Memo1.Lines.Clear;
+  Memo1.Lines.AddText('Open Aplikasi');
 end;
 
 procedure TForm1.ExitMenuClick(Sender: TObject);
@@ -106,34 +107,36 @@ end;
 
 procedure TForm1.LazSerial1RxData(Sender: TObject);
 var
-  IncomingData: string;
-  B : byte;
+  S: String;
+  CalcChecksum: Byte;
+  i: Integer;
+  MsgLen: Integer;
 begin
-  B := LazSerial1.SynSer.RecvByte(1000);
-  Memo1.Lines.Add(char(B));
-  //IncomingData := LazSerial1.ReadData;
-  //Memo1.Lines.Add(IncomingData);
-  // Len := LazSerial1.ReadData;
-  // //IncomingData := LazSerial1.ReadData;
-  // //RxData := RxData + IncomingData;
-  // //if(IncomingData = $10) then Memo1.Lines.Add(RxData);
-  // if Len > 0 then
-  //begin
-  //  SetLength(Buffer, Len);
-  //  LazSerial1.ReadBuffer(Buffer[0], Len);
+  S := LazSerial1.ReadData;
 
-  // Cek apakah ini respon untuk CMD_CHECK_CONN (0x06)
-  //if (Buffer[0] = $AA) and (Buffer[1] = $06) then
-  //begin
-  //   Memo1.Lines.Add('Arduino terdeteksi dan merespon protokol.');
-  //end;
-  //end;
+  // Minimal paket: Header(1) + Cmd(1) + Len(1) + Checksum(1) = 4 byte
+  if Length(S) >= 4 then
+  begin
+    if Byte(S[1]) = $AA then
+    begin
+      MsgLen := Byte(S[3]);
 
-end;
+      // Hitung checksum dari data yang diterima
+      CalcChecksum := 0;
+      for i := 1 to (3 + MsgLen) do
+        CalcChecksum := CalcChecksum xor Byte(S[i]);
 
-procedure TForm1.Memo1Change(Sender: TObject);
-begin
-
+      // Bandingkan dengan byte terakhir di paket
+      if CalcChecksum = Byte(S[4 + MsgLen]) then
+      begin
+        // Ambil pesan saja (mulai dari karakter ke-4 sepanjang MsgLen)
+        btnConnect.Glyph.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
+        Memo1.Lines.Add('Valid: ' + Copy(S, 4, MsgLen));
+      end
+      else
+        Memo1.Lines.Add('Error: Checksum tidak cocok!');
+    end;
+  end;
 end;
 
 
@@ -142,8 +145,8 @@ begin
   if OpenDialog1.Execute then
   begin
     if Assigned(FileData) then FileData.Clear
-    else
-      FileData := TMemoryStream.Create;
+    else FileData := TMemoryStream.Create;
+
     FileData.LoadFromFile(OpenDialog1.FileName);
 
     // Tentukan jumlah baris secara instan
@@ -152,7 +155,9 @@ begin
 
     StatusBar1.Panels.Items[1].Text := StatusBar1.Panels.Items[1].Text +
       OpenDialog1.FileName;
-  end;
+    Memo1.Lines.AddText('File open:'+OpenDialog1.FileName);
+  end
+  else Memo1.Lines.AddText('File open canceled');
 
 end;
 
@@ -240,6 +245,11 @@ begin
   end;
 
   StringGrid1.Canvas.TextRect(aRect, aRect.Left + 2, aRect.Top + 2, S, TS);
+end;
+
+procedure TForm1.ToolBar1Click(Sender: TObject);
+begin
+
 end;
 
 end.
