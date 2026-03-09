@@ -21,6 +21,7 @@ type
     Memo1: TMemo;
     MenuItem1: TMenuItem;
     Edit: TMenuItem;
+    ReadId: TMenuItem;
     ReplaceMenu: TMenuItem;
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
@@ -35,6 +36,8 @@ type
     SpeedButton1: TSpeedButton;
     SpeedButton2: TSpeedButton;
     SpeedButton3: TSpeedButton;
+    SpeedButton4: TSpeedButton;
+    SpeedButton5: TSpeedButton;
     StatusBar1: TStatusBar;
     StringGrid1: TStringGrid;
     ToolBar1: TToolBar;
@@ -43,10 +46,13 @@ type
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure LazSerial1RxData(Sender: TObject);
+    procedure ReadIdClick(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure SaveAsMenuClick(Sender: TObject);
     procedure SaveMenuClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
+    procedure SpeedButton4Click(Sender: TObject);
+    procedure SpeedButton5Click(Sender: TObject);
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
       aRect: TRect; aState: TGridDrawState);
     procedure ToolBar1Click(Sender: TObject);
@@ -111,6 +117,7 @@ var
   CalcChecksum: Byte;
   i: Integer;
   MsgLen: Integer;
+  PNG: TPortableNetworkGraphic;
 begin
   S := LazSerial1.ReadData;
 
@@ -129,14 +136,32 @@ begin
       // Bandingkan dengan byte terakhir di paket
       if CalcChecksum = Byte(S[4 + MsgLen]) then
       begin
+        PNG := TPortableNetworkGraphic.Create;
+        try
+          PNG.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
+          btnConnect.Glyph.Assign(PNG);
+        finally
+          PNG.Free;
+        end;
         // Ambil pesan saja (mulai dari karakter ke-4 sepanjang MsgLen)
-        btnConnect.Glyph.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
         Memo1.Lines.Add('Valid: ' + Copy(S, 4, MsgLen));
       end
       else
         Memo1.Lines.Add('Error: Checksum tidak cocok!');
     end;
   end;
+end;
+
+procedure TForm1.ReadIdClick(Sender: TObject);
+var
+Packet: array[0..3] of Byte;
+begin
+  Packet[0] := $AA;
+  Packet[1] := $01; // CMD_GET_ID
+  Packet[2] := $00;
+  Packet[3] := $AA xor $01 xor $00;
+
+  LazSerial1.WriteBuffer(Packet[0], 4);
 end;
 
 
@@ -173,6 +198,24 @@ begin
 end;
 
 procedure TForm1.SpeedButton1Click(Sender: TObject);
+begin
+
+end;
+
+procedure TForm1.SpeedButton4Click(Sender: TObject);
+var
+  Packet: array[0..3] of byte;
+begin
+  Packet[0] := $AA; // Header
+  Packet[1] := $07; // CMD_SCAN
+  Packet[2] := $00; // Length 0
+  Packet[3] := $AA xor $07 xor $00; // Checksum
+
+  LazSerial1.WriteBuffer(Packet[0], 4);
+
+end;
+
+procedure TForm1.SpeedButton5Click(Sender: TObject);
 begin
 
 end;
