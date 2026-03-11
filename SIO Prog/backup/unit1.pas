@@ -21,6 +21,7 @@ type
     Memo1: TMemo;
     MenuItem1: TMenuItem;
     Edit: TMenuItem;
+    menuRead: TMenuItem;
     ReadId: TMenuItem;
     ReplaceMenu: TMenuItem;
     MenuItem3: TMenuItem;
@@ -46,6 +47,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure LazSerial1RxData(Sender: TObject);
+    procedure menuReadClick(Sender: TObject);
     procedure ReadIdClick(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure SaveAsMenuClick(Sender: TObject);
@@ -56,6 +58,7 @@ type
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
       aRect: TRect; aState: TGridDrawState);
     procedure ToolBar1Click(Sender: TObject);
+    procedure RequestNextBlock;
   private
 
   public
@@ -64,17 +67,42 @@ type
 
 var
   Form1: TForm1;
-  FileData: TMemoryStream;
   RxData: string;
   header:Array [0..2] of byte;
   Buffer: array of byte;
   LenBuffer: integer;
+  FileData: TMemoryStream;   // Tempat menyimpan hasil dump BIOS
+  CurrentAddr: Cardinal;     // Alamat yang sedang dibaca
+  MaxAddr: Cardinal;         // Total ukuran chip (misal 2MB = 2097152)
+  IsReading: Boolean;        // Flag untuk menandakan proses sedang berjalan
 
 implementation
 
 {$R *.lfm}
 
 { TForm1 }
+procedure TForm1.RequestNextBlock;
+var
+  Packet: array[0..6] of Byte;
+begin
+  if CurrentAddr < MaxAddr then
+  begin
+    Packet[0] := $AA;
+    Packet[1] := $03; // CMD_READ_BLOCK
+    Packet[2] := $03; // Panjang parameter alamat (3 byte)
+    Packet[3] := (CurrentAddr shr 16) and $FF;
+    Packet[4] := (CurrentAddr shr 8) and $FF;
+    Packet[5] := CurrentAddr and $FF;
+    Packet[6] := Packet[0] xor Packet[1] xor Packet[2] xor Packet[3] xor Packet[4] xor Packet[5];
+
+    LazSerial1.WriteBuffer(Packet[0], 7);
+  end
+  else
+  begin
+    IsReading := False;
+    ShowMessage('Pembacaan BIOS Selesai!');
+  end;
+end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
@@ -150,6 +178,28 @@ begin
         Memo1.Lines.Add('Error: Checksum tidak cocok!');
     end;
   end;
+end;
+
+procedure TForm1.menuReadClick(Sender: TObject);
+begin
+  if not LazSerial1.Active then begin
+    ShowMessage('Hubungkan Serial Port Terlebih Dahulu!');
+    Exit;
+  end;
+
+  // Inisialisasi
+  if Assigned(FileData) then FileData.Clear else FileData := TMemoryStream.Create;
+
+  MaxAddr := 2 * 1024 * 1024; // 2MB sesuai hasil EF4018
+  FileData.SetSize(MaxAddr);
+  CurrentAddr := 0;
+  IsReading := True;
+
+  ProgressBar1.Max := MaxAddr;
+  ProgressBar1.Position := 0;
+
+  // Mulai permintaan pertama
+  RequestNextBlock;
 end;
 
 procedure TForm1.ReadIdClick(Sender: TObject);

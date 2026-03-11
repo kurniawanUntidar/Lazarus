@@ -707,6 +707,13 @@ object Form1: TForm1
       OnClick = ReadIdClick
     end
   end
+  object ProgressBar1: TProgressBar
+    Left = 8
+    Height = 20
+    Top = 56
+    Width = 660
+    TabOrder = 4
+  end
   object MainMenu1: TMainMenu
     Left = 568
     object MenuItem1: TMenuItem
@@ -1036,6 +1043,10 @@ object Form1: TForm1
       object ReadId: TMenuItem
         Caption = 'Read ID'
         OnClick = ReadIdClick
+      end
+      object menuRead: TMenuItem
+        Caption = 'Read'
+        OnClick = menuReadClick
       end
     end
     object MenuItem3: TMenuItem
