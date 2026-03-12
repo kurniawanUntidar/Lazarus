@@ -187,6 +187,7 @@ object Form1: TForm1
       Lines.Strings = (
         'Memo1'
       )
+      ScrollBars = ssAutoBoth
       TabOrder = 0
     end
   end
@@ -708,11 +709,20 @@ object Form1: TForm1
     end
   end
   object ProgressBar1: TProgressBar
-    Left = 8
+    Left = 672
     Height = 20
-    Top = 56
-    Width = 660
+    Top = 8
+    Width = 300
     TabOrder = 4
+  end
+  object cbChip: TComboBox
+    Left = 8
+    Height = 29
+    Top = 48
+    Width = 308
+    ItemHeight = 0
+    TabOrder = 5
+    Text = 'cbChip'
   end
   object MainMenu1: TMainMenu
     Left = 568

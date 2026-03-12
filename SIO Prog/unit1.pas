@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Menus, Grids, ExtCtrls,
-  StdCtrls, ComCtrls, Buttons, LazSerial, Types;
+  StdCtrls, ComCtrls, Buttons, LazSerial, fpJson, jsonparser, Types;
 
 type
 
@@ -14,6 +14,7 @@ type
 
   TForm1 = class(TForm)
     btnConnect: TSpeedButton;
+    cbChip: TComboBox;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     LazSerial1: TLazSerial;
@@ -60,6 +61,7 @@ type
       aRect: TRect; aState: TGridDrawState);
     procedure ToolBar1Click(Sender: TObject);
     procedure RequestNextBlock;
+    procedure loadItemCombobox;
   private
 
   public
@@ -82,6 +84,15 @@ implementation
 {$R *.lfm}
 
 { TForm1 }
+procedure TForm1.loadItemCombobox;
+var
+  LJsonData: string;
+  LJsonValue, LItem: TJSONData;
+  LJsonArray: TJSONArray;
+  I: Integer;
+begin
+end;
+
 procedure TForm1.RequestNextBlock;
 var
   Packet: array[0..6] of Byte;
@@ -91,9 +102,12 @@ begin
     Packet[0] := $AA;
     Packet[1] := $03; // CMD_READ_BLOCK
     Packet[2] := $03; // Panjang parameter alamat (3 byte)
-    Packet[3] := (CurrentAddr shr 16) and $FF;
-    Packet[4] := (CurrentAddr shr 8) and $FF;
-    Packet[5] := CurrentAddr and $FF;
+    //Packet[3] := (CurrentAddr shr 16) and $FF;
+    //Packet[4] := (CurrentAddr shr 8) and $FF;
+    //Packet[5] := CurrentAddr and $FF;
+    Packet[3] := $00;
+    Packet[4] := $00;
+    Packet[5] := $0B;
     Packet[6] := Packet[0] xor Packet[1] xor Packet[2] xor Packet[3] xor Packet[4] xor Packet[5];
 
     LazSerial1.WriteBuffer(Packet[0], 7);
@@ -127,6 +141,9 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  vendorList: TStringList;
+  s: string;
 begin
   StatusBar1.Panels.Items[0].Width := Form1.Width div 4;
   StatusBar1.Panels.Items[1].Width := Form1.Width div 2;
@@ -144,39 +161,76 @@ procedure TForm1.LazSerial1RxData(Sender: TObject);
 var
   S: String;
   CalcChecksum: Byte;
-  i: Integer;
-  MsgLen: Integer;
+  i, MsgLen, CmdID: Integer;
   PNG: TPortableNetworkGraphic;
 begin
   S := LazSerial1.ReadData;
+  if Length(S) < 4 then Exit; // Abaikan jika paket terlalu pendek
 
-  // Minimal paket: Header(1) + Cmd(1) + Len(1) + Checksum(1) = 4 byte
-  if Length(S) >= 4 then
+  if Byte(S[1]) = $AA then
   begin
-    if Byte(S[1]) = $AA then
+    CmdID := Byte(S[2]);
+    MsgLen := Byte(S[3]);
+
+    // --- LOGIKA UNTUK PEMBACAAN BLOK DATA (CMD 0x03) ---
+    if CmdID = $03 then
     begin
-      MsgLen := Byte(S[3]);
+      // Paket blok: Header(1) + Cmd(1) + Len(1) + Data(256) + Checksum(1) = 260 byte
+      // Kita asumsikan Len=0 dari Arduino berarti 256 byte
+      if Length(S) >= 260 then
+      begin
+        CalcChecksum := 0;
+        for i := 1 to 259 do CalcChecksum := CalcChecksum xor Byte(S[i]);
 
-      // Hitung checksum dari data yang diterima
+        if CalcChecksum = Byte(S[260]) then
+        begin
+          // Simpan data ke MemoryStream
+          FileData.Position := CurrentAddr;
+          // Salin 256 byte data (mulai dari karakter ke-4)
+          FileData.Write(S[4], 256);
+
+          // Update Progress
+          CurrentAddr := CurrentAddr + 256;
+          ProgressBar1.Position := CurrentAddr;
+
+          // Update Grid setiap 1KB agar tidak lambat
+          if CurrentAddr mod 1024 = 0 then
+          begin
+            StringGrid1.Invalidate;
+            Application.ProcessMessages;
+          end;
+
+          // Minta blok berikutnya
+          RequestNextBlock;
+        end
+        else
+          Memo1.Lines.Add('Error: Checksum Data di ' + IntToHex(CurrentAddr, 6));
+      end;
+    end
+
+    // --- LOGIKA UNTUK PESAN TEKS BIASA (CMD LAINNYA) ---
+    else
+    begin
+      // Verifikasi Checksum untuk pesan teks
       CalcChecksum := 0;
-      for i := 1 to (3 + MsgLen) do
-        CalcChecksum := CalcChecksum xor Byte(S[i]);
+      for i := 1 to (3 + MsgLen) do CalcChecksum := CalcChecksum xor Byte(S[i]);
 
-      // Bandingkan dengan byte terakhir di paket
       if CalcChecksum = Byte(S[4 + MsgLen]) then
       begin
-        PNG := TPortableNetworkGraphic.Create;
-        try
-          PNG.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
-          btnConnect.Glyph.Assign(PNG);
-        finally
-          PNG.Free;
+        // Jika CMD_CHECK_CONN (0x06)
+        if CmdID = $06 then
+        begin
+          PNG := TPortableNetworkGraphic.Create;
+          try
+            PNG.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
+            btnConnect.Glyph.Assign(PNG);
+          finally
+            PNG.Free;
+          end;
         end;
-        // Ambil pesan saja (mulai dari karakter ke-4 sepanjang MsgLen)
-        Memo1.Lines.Add('Valid: ' + Copy(S, 4, MsgLen));
-      end
-      else
-        Memo1.Lines.Add('Error: Checksum tidak cocok!');
+
+        Memo1.Lines.Add('Valid [' + IntToHex(CmdID, 2) + ']: ' + Copy(S, 4, MsgLen));
+      end;
     end;
   end;
 end;
@@ -191,7 +245,7 @@ begin
   // Inisialisasi
   if Assigned(FileData) then FileData.Clear else FileData := TMemoryStream.Create;
 
-  MaxAddr := 2 * 1024 * 1024; // 2MB sesuai hasil EF4018
+  MaxAddr := 2 * 1024 * 1024; // 2MB untuk EF4018
   FileData.SetSize(MaxAddr);
   CurrentAddr := 0;
   IsReading := True;
