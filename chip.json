@@ -1,9 +1,0 @@
-{
-"WINBOND":{
-	"Series":"W25Q128JV",
-	"Capacity":"128Mb",
-	"Package" :"SOIC-8"
-	},
-"ATMEL":{
-	}
-}

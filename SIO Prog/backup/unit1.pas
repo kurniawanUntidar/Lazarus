@@ -14,9 +14,12 @@ type
 
   TForm1 = class(TForm)
     btnConnect: TSpeedButton;
-    cbChip: TComboBox;
+    cbDevice: TComboBox;
+    cbManufacture: TComboBox;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
+    GroupBox3: TGroupBox;
+    GroupBox4: TGroupBox;
     LazSerial1: TLazSerial;
     MainMenu1: TMainMenu;
     Memo1: TMemo;
@@ -45,6 +48,7 @@ type
     StringGrid1: TStringGrid;
     ToolBar1: TToolBar;
     procedure btnConnectClick(Sender: TObject);
+    procedure cbManufactureChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
@@ -61,7 +65,7 @@ type
       aRect: TRect; aState: TGridDrawState);
     procedure ToolBar1Click(Sender: TObject);
     procedure RequestNextBlock;
-    procedure loadItemCombobox;
+    procedure LoadChipDatabase;
   private
 
   public
@@ -74,6 +78,7 @@ var
   header:Array [0..2] of byte;
   Buffer: array of byte;
   LenBuffer: integer;
+  JSONData: TJSONData; // Variabel global untuk menampung database chip
   FileData: TMemoryStream;   // Tempat menyimpan hasil dump BIOS
   CurrentAddr: Cardinal;     // Alamat yang sedang dibaca
   MaxAddr: Cardinal;         // Total ukuran chip (misal 2MB = 2097152)
@@ -84,13 +89,31 @@ implementation
 {$R *.lfm}
 
 { TForm1 }
-procedure TForm1.loadItemCombobox;
+procedure TForm1.LoadChipDatabase;
 var
-  LJsonData: string;
-  LJsonValue, LItem: TJSONValue;
-  LJsonArray: TJSONArray;
-  I: Integer;
+  FileStream: TFileStream;
+  Parser: TJSONParser;
+  i: Integer;
 begin
+  if not FileExists('chips.json') then
+  begin
+    Showmessage('File not Found');
+    Exit;
+  end;
+
+  FileStream := TFileStream.Create('chips.json', fmOpenRead);
+  Parser := TJSONParser.Create(FileStream);
+  try
+    JSONData := Parser.Parse;
+    cbManufacture.Items.Clear;
+    for i := 0 to JSONData.Count - 1 do
+    begin
+      cbManufacture.Items.Add(JSONData.Items[i].FindPath('manufacture').AsString);
+    end;
+  finally
+    Parser.Free;
+    FileStream.Free;
+  end;
 end;
 
 procedure TForm1.RequestNextBlock;
@@ -140,6 +163,23 @@ begin
 
 end;
 
+procedure TForm1.cbManufactureChange(Sender: TObject);
+var
+  i, j: Integer;
+  Devices: TJSONArray;
+begin
+  cbDevice.Items.Clear;
+  i := cbManufacture.ItemIndex;
+
+  // Ambil array 'devices' berdasarkan index manufacture yang dipilih
+  Devices := TJSONArray(JSONData.Items[i].FindPath('devices'));
+
+  for j := 0 to Devices.Count - 1 do
+  begin
+    cbDevice.Items.Add(Devices.Items[j].FindPath('name').AsString);
+  end;
+end;
+
 procedure TForm1.FormCreate(Sender: TObject);
 var
   vendorList: TStringList;
@@ -150,6 +190,7 @@ begin
   StatusBar1.Panels.Items[2].Width := Form1.Width div 4;
   Memo1.Lines.Clear;
   Memo1.Lines.AddText('Open Aplikasi');
+  LoadChipDatabase();
 end;
 
 procedure TForm1.ExitMenuClick(Sender: TObject);
