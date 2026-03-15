@@ -1,0 +1,65 @@
+procedure TForm1.LazSerial1RxData(Sender: TObject);
+var
+  HeaderPos, msgLen,i : Integer;
+  CalcChecksum: Byte;
+  S:string;
+begin
+  CalcChecksum := 0;
+  S := LazSerial1.ReadData;
+  Memo1.lines.Add('length '+IntToStr(Length(S)));
+  // Cari di mana posisi $AA
+  if isReading <> true then
+  begin
+    HeaderPos := Pos(#$AA, S);
+    // Jika ditemukan dan bukan di posisi 1, buang sampah di depannya
+    if HeaderPos > 1 then Delete(S, 1, HeaderPos - 1);
+    msgLen := Byte(S[3]);
+  end;
+
+  if msgLen > 0 then
+  begin
+    for i := 1 to (3 + MsgLen) do CalcChecksum := CalcChecksum xor Byte(S[i]);
+    if CalcChecksum <> Byte(S[msgLen+4]) then Memo1.Lines.Add('Checksum error [' + IntToHex(CalcChecksum, 2) + '] recieved ['+ IntToHex(Byte(S[msgLen+4]), 2) + ']');
+  end
+  else
+  begin
+    isReading := true;
+    rxData := RxData + S;
+    while length(RxData) >= 260 do
+       begin
+         isReading := false;
+         for i := 1 to length(RxData) do CalcChecksum := CalcChecksum xor Byte(RxData[i]);
+         if CalcChecksum <> Byte(RxData[length(RxData)]) then Memo1.Lines.Add('Checksum error 1 [' + IntToHex(CalcChecksum, 2) + '] recieved ['+ IntToHex(Byte(S[260]), 2) + ']');
+       end;
+  end;
+
+
+  //Get ID
+  if ((Byte(S[1]) = $AA) and (Byte(S[2]) = $01)) then
+  begin
+    Form1.IdentifyChip(Copy(S,4,MsgLen));
+  end
+  //Read Block
+  else if ((Byte(S[1]) = $AA) and (Byte(S[2]) = $03)) and IsReading=true then
+  begin
+     Form1.readBlock(Copy(RxData,4,length(RxData)-4));
+  end
+   //Write Block
+  else if ((Byte(S[1]) = $AA) and (Byte(S[2]) = $04)) then
+  begin
+  end
+   //Set PINS
+  else if ((Byte(S[1]) = $AA) and (Byte(S[2]) = $05)) then
+  begin
+  end
+  //Check Conn
+  else if ((Byte(S[1]) = $AA) and (Byte(S[2]) = $06)) then
+  begin
+    Form1.checkConnection(copy(S,4,MsgLen));
+  end
+  else if ((Byte(S[1]) = $AA) and (Byte(S[2]) = $07)) then
+  begin
+    //Scan
+  end;
+
+end;                               

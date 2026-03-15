@@ -1,0 +1,93 @@
+procedure TForm1.LazSerial1RxData(Sender: TObject);
+var
+  S: String;
+  CalcChecksum,DataByte: Byte;
+  i, MsgLen, CmdID,j: Integer;
+  PNG: TPortableNetworkGraphic;
+begin
+  S := LazSerial1.ReadData;
+  if Length(S) < 4 then Exit; // Abaikan jika paket terlalu pendek
+
+  if Byte(S[1]) = $AA then
+  begin
+    CmdID := Byte(S[2]);
+    MsgLen := Byte(S[3]);
+
+    // --- LOGIKA UNTUK PEMBACAAN BLOK DATA (CMD 0x03) ---
+    if CmdID = $03 then
+    begin
+      // Paket blok: Header(1) + Cmd(1) + Len(1) + Data(256) + Checksum(1) = 260 byte
+      // Kita asumsikan Len=0 dari Arduino berarti 256 byte
+      if Length(S) >= 260 then
+      begin
+        CalcChecksum := 0;
+        for i := 1 to 259 do CalcChecksum := CalcChecksum xor Byte(S[i]);
+
+        if CalcChecksum = Byte(S[260]) then
+        begin
+          // Simpan data ke MemoryStream
+          FileData.Position := CurrentAddr;
+          // Salin 256 byte data (mulai dari karakter ke-4)
+          for j := 0 to 255 do
+          begin
+            DataByte := Byte(S[4 + j]);
+            FileData.Write(DataByte, 1);
+          end;
+          Memo1.Lines.Add('Valid[' + IntToHex(CmdID, 2) + ']: '  + IntToHex(CurrentAddr, 6));
+          CurrentAddr := CurrentAddr + 256;
+          ProgressBar1.Position := CurrentAddr;
+          StringGrid1.RowCount := (FileData.Size div 16) + 1;
+          StringGrid1.Invalidate;
+
+
+          RequestNextBlock; // Panggil blok selanjutnya
+
+
+          //// Update Grid setiap 1KB agar tidak lambat
+          //if CurrentAddr mod 1024= 0 then
+          //begin
+          //  StringGrid1.Invalidate;
+          //  Application.ProcessMessages;
+          //end;
+          //// Minta blok berikutnya
+          //RequestNextBlock;
+        end
+        else
+          Memo1.Lines.Add('Error: Checksum Data di ' + IntToHex(CurrentAddr, 6));
+      end;
+    end
+    // --- LOGIKA UNTUK PESAN TEKS BIASA (CMD LAINNYA) ---
+    else
+    begin
+      // Verifikasi Checksum untuk pesan teks
+      CalcChecksum := 0;
+      for i := 1 to (3 + MsgLen) do CalcChecksum := CalcChecksum xor Byte(S[i]);
+
+      if CalcChecksum = Byte(S[4 + MsgLen]) then
+      begin
+        // Jika CMD_CHECK_CONN (0x06)
+        if CmdID = $06 then
+        begin
+          PNG := TPortableNetworkGraphic.Create;
+          try
+            PNG.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
+            btnConnect.Glyph.Assign(PNG);
+          finally
+            PNG.Free;
+          end;
+        end
+        else if CmdID = $01 then
+        begin
+          Form1.IdentifyChip(Copy(S,4,MsgLen));
+        end;
+
+        Memo1.Lines.Add('Valid [' + IntToHex(CmdID, 2) + ']: ' + Copy(S, 4, MsgLen));
+      end;
+    end;
+  end;
+end;   
+
+
+
+
+

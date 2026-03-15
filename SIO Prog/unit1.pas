@@ -52,7 +52,6 @@ type
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
-    procedure FormKeyPress(Sender: TObject; var Key: char);
     procedure LazSerial1RxData(Sender: TObject);
     procedure menuReadClick(Sender: TObject);
     procedure ReadIdClick(Sender: TObject);
@@ -61,14 +60,17 @@ type
     procedure SaveMenuClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
     procedure SpeedButton4Click(Sender: TObject);
-    procedure SpeedButton5Click(Sender: TObject);
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
       aRect: TRect; aState: TGridDrawState);
-    procedure ToolBar1Click(Sender: TObject);
     procedure RequestNextBlock;
     procedure LoadChipDatabase;
+    procedure IdentifyChip(ReceivedID: String);
+    procedure StringGrid1GetEditText(Sender: TObject; ACol, ARow: Integer;
+      var Value: string);
   private
-
+         RxBuffer: String; // Untuk menampung potongan data yang masuk
+         procedure checkConnection(msg:String);
+         procedure readBlock(dataRx:string);
   public
 
   end;
@@ -90,6 +92,83 @@ implementation
 {$R *.lfm}
 
 { TForm1 }
+procedure TForm1.readBlock(dataRx:String);
+var
+  i : integer;
+begin
+  Memo1.Lines.Add('Data Received') ;
+ for i:=1 to Length(dataRx) do Memo1.Lines.Add(intToHex(byte(dataRx[i])));
+end;
+
+procedure TForm1.checkConnection(msg:String);
+var
+  PNG: TPortableNetworkGraphic;
+begin
+     PNG := TPortableNetworkGraphic.Create;
+          try
+            PNG.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
+            btnConnect.Glyph.Assign(PNG);
+          finally
+            PNG.Free;
+          end;
+     Memo1.Lines.Add('Valid : ' + msg);
+end;
+
+procedure TForm1.IdentifyChip(ReceivedID: String);
+var
+  i, j: Integer;
+  Devices: TJSONArray;
+  TargetID: String;
+begin
+  for i := 0 to JSONData.Count - 1 do
+  begin
+    Devices := TJSONArray(JSONData.Items[i].FindPath('devices'));
+    for j := 0 to Devices.Count - 1 do
+    begin
+      TargetID := Devices.Items[j].FindPath('id').AsString;
+      if TargetID = ReceivedID then
+      begin
+        cbManufacture.ItemIndex := i;
+        cbManufactureChange(Self); // Trigger untuk isi cbDevice
+        cbDevice.ItemIndex := j;
+
+        // Update ukuran maksimal pembacaan secara otomatis
+        MaxAddr := Devices.Items[j].FindPath('size_kb').AsInteger * 1024;
+        Memo1.Lines.Add('Chip Terdeteksi: '+ TargetID);
+        Memo1.Lines.Add('Manufacture: ' + cbManufacture.Text);
+        Memo1.Lines.Add('Device: ' + cbDevice.Text);
+        Memo1.Lines.Add('Capacity: ' + Devices.Items[j].FindPath('size_kb').AsString+' Kb');
+        Exit;
+      end;
+    end;
+  end;
+  Memo1.Lines.Add('ID tidak dikenal dalam database.');
+end;
+
+procedure TForm1.StringGrid1GetEditText(Sender: TObject; ACol, ARow: Integer; var Value: string);
+var
+  ByteVal: Byte;
+  Posisi: Int64;
+begin
+  if (ARow = 0) or (not Assigned(FileData)) then Exit;
+
+  // Hitung posisi byte di dalam FileData
+  Posisi := (ARow - 1) * 16;
+
+  if ACol = 0 then // Kolom Alamat
+    Value := IntToHex(Posisi, 8)
+  else if (ACol >= 1) and (ACol <= 16) then // Kolom Hex
+  begin
+    Posisi := Posisi + (ACol - 1);
+    if Posisi < FileData.Size then
+    begin
+      FileData.Position := Posisi;
+      FileData.Read(ByteVal, 1);
+      Value := IntToHex(ByteVal, 2);
+    end;
+  end;
+end;
+
 procedure TForm1.LoadChipDatabase;
 var
   FileStream: TFileStream;
@@ -126,12 +205,9 @@ begin
     Packet[0] := $AA;
     Packet[1] := $03; // CMD_READ_BLOCK
     Packet[2] := $03; // Panjang parameter alamat (3 byte)
-    //Packet[3] := (CurrentAddr shr 16) and $FF;
-    //Packet[4] := (CurrentAddr shr 8) and $FF;
-    //Packet[5] := CurrentAddr and $FF;
-    Packet[3] := $00;
-    Packet[4] := $00;
-    Packet[5] := $0B;
+    Packet[3] := (CurrentAddr shr 16) and $FF;
+    Packet[4] := (CurrentAddr shr 8) and $FF;
+    Packet[5] := CurrentAddr and $FF;
     Packet[6] := Packet[0] xor Packet[1] xor Packet[2] xor Packet[3] xor Packet[4] xor Packet[5];
 
     LazSerial1.WriteBuffer(Packet[0], 7);
@@ -158,8 +234,6 @@ begin
   Packet[3] := $AA xor $06 xor $00; // Checksum
 
   LazSerial1.Open;
-  //LazSerial1.WriteData('a');
-
   LazSerial1.WriteBuffer(Packet[0], 4);
 
 end;
@@ -182,9 +256,6 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
-var
-  vendorList: TStringList;
-  s: string;
 begin
   StatusBar1.Panels.Items[0].Width := Form1.Width div 4;
   StatusBar1.Panels.Items[1].Width := Form1.Width div 2;
@@ -192,93 +263,84 @@ begin
   Memo1.Lines.Clear;
   Memo1.Lines.AddText('Open Aplikasi');
   LoadChipDatabase();
+  isReading := false;
+  RxData :='';
 end;
 
 procedure TForm1.ExitMenuClick(Sender: TObject);
 begin
   Application.Terminate;
 end;
-
-procedure TForm1.FormKeyPress(Sender: TObject; var Key: char);
-begin
-
-end;
-
+// RX DATA
+//=============================================================================//
 procedure TForm1.LazSerial1RxData(Sender: TObject);
 var
   S: String;
+  i, HeaderPos: Integer;
   CalcChecksum: Byte;
-  i, MsgLen, CmdID: Integer;
-  PNG: TPortableNetworkGraphic;
+  DataByte: Byte;
 begin
+  // 1. Ambil potongan data (misal 32 byte) dan gabungkan ke penampung utama
   S := LazSerial1.ReadData;
-  if Length(S) < 4 then Exit; // Abaikan jika paket terlalu pendek
+  RxBuffer := RxBuffer + S;
 
-  if Byte(S[1]) = $AA then
+  // Debug untuk memantau akumulasi
+  // MemoLog.Lines.Add('Buffer sekarang: ' + IntToStr(Length(RxBuffer)));
+
+  // 2. Cari Header $AA agar kita tidak salah posisi jika ada data sampah
+  HeaderPos := Pos(#$AA, RxBuffer);
+  if HeaderPos > 1 then
+    Delete(RxBuffer, 1, HeaderPos - 1);
+
+  // 3. Hanya proses jika di dalam ember sudah terkumpul MINIMAL 260 byte
+  while (Length(RxBuffer) >= 260) do
   begin
-    CmdID := Byte(S[2]);
-    MsgLen := Byte(S[3]);
-
-    // --- LOGIKA UNTUK PEMBACAAN BLOK DATA (CMD 0x03) ---
-    if CmdID = $03 then
+    // Pastikan ini paket yang benar (Header AA, Cmd 03)
+    if (Byte(RxBuffer[1]) = $AA) and (Byte(RxBuffer[2]) = $03) then
     begin
-      // Paket blok: Header(1) + Cmd(1) + Len(1) + Data(256) + Checksum(1) = 260 byte
-      // Kita asumsikan Len=0 dari Arduino berarti 256 byte
-      if Length(S) >= 260 then
-      begin
-        CalcChecksum := 0;
-        for i := 1 to 259 do CalcChecksum := CalcChecksum xor Byte(S[i]);
-
-        if CalcChecksum = Byte(S[260]) then
-        begin
-          // Simpan data ke MemoryStream
-          FileData.Position := CurrentAddr;
-          // Salin 256 byte data (mulai dari karakter ke-4)
-          FileData.Write(S[4], 256);
-
-          // Update Progress
-          CurrentAddr := CurrentAddr + 256;
-          ProgressBar1.Position := CurrentAddr;
-
-          // Update Grid setiap 1KB agar tidak lambat
-          if CurrentAddr mod 1024 = 0 then
-          begin
-            StringGrid1.Invalidate;
-            Application.ProcessMessages;
-          end;
-
-          // Minta blok berikutnya
-          RequestNextBlock;
-        end
-        else
-          Memo1.Lines.Add('Error: Checksum Data di ' + IntToHex(CurrentAddr, 6));
-      end;
-    end
-
-    // --- LOGIKA UNTUK PESAN TEKS BIASA (CMD LAINNYA) ---
-    else
-    begin
-      // Verifikasi Checksum untuk pesan teks
+      // 4. Hitung Checksum paket utuh (1 s/d 259)
       CalcChecksum := 0;
-      for i := 1 to (3 + MsgLen) do CalcChecksum := CalcChecksum xor Byte(S[i]);
+      for i := 1 to 259 do
+        CalcChecksum := CalcChecksum xor Byte(RxBuffer[i]);
 
-      if CalcChecksum = Byte(S[4 + MsgLen]) then
+      if CalcChecksum = Byte(RxBuffer[260]) then
       begin
-        // Jika CMD_CHECK_CONN (0x06)
-        if CmdID = $06 then
+        // DATA VALID! Tulis ke MemoryStream
+        FileData.Position := CurrentAddr;
+        for i := 0 to 255 do
         begin
-          PNG := TPortableNetworkGraphic.Create;
-          try
-            PNG.LoadFromFile(ExtractFilePath(Application.ExeName) + 'Image/Connection_05_24.png');
-            btnConnect.Glyph.Assign(PNG);
-          finally
-            PNG.Free;
-          end;
+          DataByte := Byte(RxBuffer[4 + i]);
+          FileData.Write(DataByte, 1);
         end;
 
-        Memo1.Lines.Add('Valid [' + IntToHex(CmdID, 2) + ']: ' + Copy(S, 4, MsgLen));
+        // 5. Buang paket yang sudah diproses (260 byte) dari ember
+        Delete(RxBuffer, 1, 260);
+
+        // 6. Update progres & Minta blok berikutnya
+        CurrentAddr := CurrentAddr + 256;
+        ProgressBar1.Position := CurrentAddr;
+
+        // Refresh Tampilan Grid (Virtual Mode)
+        StringGrid1.Invalidate;
+
+        // Kirim permintaan blok berikutnya ke Arduino
+        RequestNextBlock;
+      end
+      else
+      begin
+        // Jika checksum salah, mungkin AA ini bukan header asli, buang 1 byte cari AA lagi
+        Delete(RxBuffer, 1, 1);
       end;
+    end
+    else
+    begin
+      // Jika bukan paket kita, buang 1 byte
+      Delete(RxBuffer, 1, 1);
     end;
+
+    // Cari lagi Header di sisa buffer jika ada
+    HeaderPos := Pos(#$AA, RxBuffer);
+    if (HeaderPos > 1) then Delete(RxBuffer, 1, HeaderPos - 1);
   end;
 end;
 
@@ -292,10 +354,13 @@ begin
   // Inisialisasi
   if Assigned(FileData) then FileData.Clear else FileData := TMemoryStream.Create;
 
-  MaxAddr := 2 * 1024 * 1024; // 2MB untuk EF4018
+  MaxAddr := 16 * 1024 * 1024; // 2MB untuk EF4018
+  RxBuffer := ''; // RESET BUFFER DI SINI
   FileData.SetSize(MaxAddr);
   CurrentAddr := 0;
   IsReading := True;
+
+  StringGrid1.RowCount := (MaxAddr div 16) + 1;
 
   ProgressBar1.Max := MaxAddr;
   ProgressBar1.Position := 0;
@@ -315,7 +380,6 @@ begin
 
   LazSerial1.WriteBuffer(Packet[0], 4);
 end;
-
 
 procedure TForm1.OpenMenuClick(Sender: TObject);
 begin
@@ -367,10 +431,6 @@ begin
 
 end;
 
-procedure TForm1.SpeedButton5Click(Sender: TObject);
-begin
-
-end;
 
 procedure TForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: integer;
   aRect: TRect; aState: TGridDrawState);
@@ -440,11 +500,6 @@ begin
   end;
 
   StringGrid1.Canvas.TextRect(aRect, aRect.Left + 2, aRect.Top + 2, S, TS);
-end;
-
-procedure TForm1.ToolBar1Click(Sender: TObject);
-begin
-
 end;
 
 end.

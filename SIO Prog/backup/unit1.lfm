@@ -10,7 +10,6 @@ object Form1: TForm1
   LCLVersion = '4.4.0.0'
   OnClose = FormClose
   OnCreate = FormCreate
-  OnKeyPress = FormKeyPress
   object StatusBar1: TStatusBar
     Left = 0
     Height = 19
@@ -149,6 +148,7 @@ object Form1: TForm1
       ParentFont = False
       TabOrder = 0
       OnDrawCell = StringGrid1DrawCell
+      OnGetEditText = StringGrid1GetEditText
       ColWidths = (
         118
         22
@@ -203,7 +203,6 @@ object Form1: TForm1
     EdgeOuter = esRaised
     ParentShowHint = False
     TabOrder = 3
-    OnClick = ToolBar1Click
     object SpeedButton3: TSpeedButton
       Left = 71
       Height = 34
@@ -1082,7 +1081,7 @@ object Form1: TForm1
     object MenuItem4: TMenuItem
       Caption = 'Device'
       object ReadId: TMenuItem
-        Caption = 'Read ID'
+        Caption = 'Chip ID'
         OnClick = ReadIdClick
       end
       object menuRead: TMenuItem
@@ -1109,7 +1108,7 @@ object Form1: TForm1
     StopBits = sbOne
     SynSer.Tag = 0
     SynSer.Handle = -1
-    SynSer.LineBuffer = '256'
+    SynSer.LineBuffer = '2048'
     SynSer.RaiseExcept = False
     SynSer.TestDSR = False
     SynSer.TestCTS = False
